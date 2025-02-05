@@ -1,40 +1,20 @@
-import { useWeb3Auth } from '@/context/Web3AuthContext';
 import { useState, useEffect } from 'react';
-import { providers } from 'near-api-js';
+import { useContractInteraction } from '@/hooks/useContractInteraction';
 
 export default function Home() {
-  const { web3auth, provider, accountId, nearConnection, loginWithProvider, logout } = useWeb3Auth();
+  const { getGreeting, setGreeting, isLoggedIn, currentAccountId } = useContractInteraction();
   const [newGreeting, setNewGreeting] = useState('');
   const [currentGreeting, setCurrentGreeting] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const getGreeting = async () => {
+  useEffect(() => {
+    fetchGreeting();
+  }, []);
+
+  const fetchGreeting = async () => {
     try {
-      const viewContract = async ({ contractId, methodName, args = {} }) => {
-        const url = `https://rpc.testnet.near.org`;
-        const provider = new providers.JsonRpcProvider({ url });
-        
-        const argsBase64 = args
-          ? Buffer.from(JSON.stringify(args)).toString("base64")
-          : "";
-
-        const viewCallResult = await provider.query({
-          request_type: "call_function",
-          account_id: contractId,
-          method_name: methodName,
-          args_base64: argsBase64,
-          finality: "optimistic",
-        });
-
-        return JSON.parse(Buffer.from(viewCallResult.result).toString());
-      };
-
-      const result = await viewContract({
-        contractId: "hello.near-examples.testnet",
-        methodName: "get_greeting",
-      });
-      
+      const result = await getGreeting();
       setCurrentGreeting(result);
     } catch (error) {
       console.error("Error getting greeting:", error);
@@ -42,12 +22,8 @@ export default function Home() {
     }
   };
 
-  useEffect(() => {
-    getGreeting();
-  }, []);
-
   const handleSetGreeting = async () => {
-    if (!nearConnection || !accountId) {
+    if (!isLoggedIn) {
       setError('Please connect your wallet first');
       return;
     }
@@ -61,20 +37,9 @@ export default function Home() {
     setError('');
 
     try {
-      const account = await nearConnection.account(accountId);
-      const result = await account.functionCall({
-        contractId: "hello.near-examples.testnet",
-        methodName: "set_greeting",
-        args: {
-          greeting: newGreeting
-        },
-        gas: 100000000000000,
-        deposit: 0,
-      });
-
-      console.log("Contract call result:", result);
+      await setGreeting(newGreeting);
       setNewGreeting('');
-      await getGreeting();
+      await fetchGreeting();
     } catch (error) {
       console.error("Contract call error:", error);
       setError('Error calling contract: ' + error.message);
@@ -87,15 +52,15 @@ export default function Home() {
     <div className="container mt-5">
       <h1>Hello Near</h1>
       
-      {web3auth?.connected && accountId && (
+      {isLoggedIn && currentAccountId && (
         <div className="alert alert-success mt-3">
-          Connected Account: {accountId}
+          Connected Account: {currentAccountId}
         </div>
       )}
 
       <div className="mt-4">
         <h3>Update Greeting</h3>
-        {!web3auth?.connected ? (
+        {!isLoggedIn ? (
           <div className="alert alert-warning">
             Please connect your wallet using one of the options in the navigation bar
           </div>
@@ -135,16 +100,6 @@ export default function Home() {
             </button>
           </div>
         )}
-      </div>
-
-      {/* Testing Logout Button */}
-      <div className="fixed-bottom p-4 text-center bg-light">
-        <button 
-          className="btn btn-danger"
-          onClick={logout}
-        >
-          Force Logout (Testing)
-        </button>
       </div>
     </div>
   );

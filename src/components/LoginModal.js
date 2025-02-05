@@ -1,6 +1,9 @@
 import React from 'react';
+import { useNear } from '../context/NearContext';
 
 export const LoginModal = ({ isOpen, onClose, onLoginWithProvider }) => {
+  const { wallet } = useNear();
+  
   if (!isOpen) return null;
 
   return (
@@ -37,6 +40,16 @@ export const LoginModal = ({ isOpen, onClose, onLoginWithProvider }) => {
               >
                 <i className="bi bi-discord"></i>
                 Continue with Discord
+              </button>
+              <button 
+                className="btn btn-secondary btn-lg d-flex align-items-center justify-content-center gap-2"
+                onClick={() => {
+                  wallet?.signIn();
+                  onClose();
+                }}
+              >
+                <i className="bi bi-wallet2"></i>
+                Log in with Wallet
               </button>
             </div>
           </div>
