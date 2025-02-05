@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { Web3Auth } from "@web3auth/modal";
 import { CommonPrivateKeyProvider } from "@web3auth/base-provider";
 import { WEB3AUTH_NETWORK, CHAIN_NAMESPACES } from "@web3auth/base";
@@ -35,9 +35,19 @@ const web3auth = new Web3Auth({
 
 export function Web3AuthProvider({ children }) {
   const [provider, setProvider] = useState(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [accountId, setAccountId] = useState(null);
   const [nearConnection, setNearConnection] = useState(null);
+
+  useEffect(() => {
+    const init = async () => {
+      try {
+        await web3auth.initModal();
+      } catch (error) {
+        console.error("Error initializing Web3Auth:", error);
+      }
+    };
+    init();
+  }, []);
 
   const setupNearConnection = async (keyPair, newAccountId) => {
     try {
@@ -74,10 +84,8 @@ export function Web3AuthProvider({ children }) {
       const pk58 = publicKey.data;
       const newAccountId = Buffer.from(pk58 || []).toString("hex");
       
-      // Setup NEAR connection with the new keypair
       await setupNearConnection(keyPair, newAccountId);
       setAccountId(newAccountId);
-      
       return { accountId: newAccountId };
     } catch (error) {
       console.error("Error getting NEAR credentials:", error);
@@ -87,11 +95,8 @@ export function Web3AuthProvider({ children }) {
 
   const login = async () => {
     try {
-      await web3auth.initModal();
       const web3authProvider = await web3auth.connect();
       setProvider(web3authProvider);
-      setIsLoggedIn(true);
-      
       await getNearCredentials(web3authProvider);
       return web3authProvider;
     } catch (error) {
@@ -102,11 +107,12 @@ export function Web3AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      await web3auth.logout();
-      setProvider(null);
-      setIsLoggedIn(false);
-      setAccountId(null);
-      setNearConnection(null);
+      if (web3auth.connected) {
+        await web3auth.logout();
+        setProvider(null);
+        setAccountId(null);
+        setNearConnection(null);
+      }
     } catch (error) {
       console.error("Logout failed:", error);
       throw error;
@@ -117,11 +123,10 @@ export function Web3AuthProvider({ children }) {
     <Web3AuthContext.Provider value={{
       web3auth,
       provider,
-      isLoggedIn,
-      login,
-      logout,
       accountId,
-      nearConnection
+      nearConnection,
+      login,
+      logout
     }}>
       {children}
     </Web3AuthContext.Provider>

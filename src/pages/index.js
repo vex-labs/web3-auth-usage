@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { providers } from 'near-api-js';
 
 export default function Home() {
-  const { web3auth, provider, accountId, isLoggedIn, nearConnection } = useWeb3Auth();
+  const { web3auth, provider, accountId, nearConnection } = useWeb3Auth();
   const [newGreeting, setNewGreeting] = useState('');
   const [currentGreeting, setCurrentGreeting] = useState('');
   const [error, setError] = useState('');
@@ -74,7 +74,6 @@ export default function Home() {
 
       console.log("Contract call result:", result);
       setNewGreeting('');
-      // Fetch the updated greeting
       await getGreeting();
     } catch (error) {
       console.error("Contract call error:", error);
@@ -88,7 +87,7 @@ export default function Home() {
     <div className="container mt-5">
       <h1>Hello Near</h1>
       
-      {isLoggedIn && accountId && (
+      {web3auth?.connected && accountId && (
         <div className="alert alert-success mt-3">
           Connected Account: {accountId}
         </div>
@@ -96,7 +95,7 @@ export default function Home() {
 
       <div className="mt-4">
         <h3>Update Greeting</h3>
-        {!isLoggedIn ? (
+        {!web3auth?.connected ? (
           <div className="alert alert-warning">
             Please connect your wallet to interact with the contract
           </div>
