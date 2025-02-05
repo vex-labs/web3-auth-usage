@@ -1,7 +1,8 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { Web3Auth } from "@web3auth/modal";
+import { Web3AuthNoModal } from "@web3auth/no-modal";
+import { AuthAdapter } from "@web3auth/auth-adapter";
 import { CommonPrivateKeyProvider } from "@web3auth/base-provider";
-import { WEB3AUTH_NETWORK, CHAIN_NAMESPACES } from "@web3auth/base";
+import { WEB3AUTH_NETWORK, CHAIN_NAMESPACES, WALLET_ADAPTERS } from "@web3auth/base";
 import { connect, KeyPair, keyStores, utils } from "near-api-js";
 import { getED25519Key } from "@web3auth/base-provider";
 
@@ -27,11 +28,14 @@ if (!process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID) {
   throw new Error('Please set NEXT_PUBLIC_WEB3AUTH_CLIENT_ID in your .env.local file');
 }
 
-const web3auth = new Web3Auth({
+const web3auth = new Web3AuthNoModal({
   clientId: process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID,
   web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_DEVNET,
   privateKeyProvider: privateKeyProvider,
 });
+
+const authAdapter = new AuthAdapter();
+web3auth.configureAdapter(authAdapter);
 
 export function Web3AuthProvider({ children }) {
   const [provider, setProvider] = useState(null);
@@ -41,7 +45,7 @@ export function Web3AuthProvider({ children }) {
   useEffect(() => {
     const init = async () => {
       try {
-        await web3auth.initModal();
+        await web3auth.init();
       } catch (error) {
         console.error("Error initializing Web3Auth:", error);
       }
@@ -93,14 +97,16 @@ export function Web3AuthProvider({ children }) {
     }
   };
 
-  const login = async () => {
+  const loginWithProvider = async (loginProvider) => {
     try {
-      const web3authProvider = await web3auth.connect();
+      const web3authProvider = await web3auth.connectTo(WALLET_ADAPTERS.AUTH, {
+        loginProvider: loginProvider,
+      });
       setProvider(web3authProvider);
       await getNearCredentials(web3authProvider);
       return web3authProvider;
     } catch (error) {
-      console.error("Login failed:", error);
+      console.error(`Login with ${loginProvider} failed:`, error);
       throw error;
     }
   };
@@ -125,7 +131,7 @@ export function Web3AuthProvider({ children }) {
       provider,
       accountId,
       nearConnection,
-      login,
+      loginWithProvider,
       logout
     }}>
       {children}

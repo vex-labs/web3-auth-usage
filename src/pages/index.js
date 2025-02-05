@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { providers } from 'near-api-js';
 
 export default function Home() {
-  const { web3auth, provider, accountId, nearConnection } = useWeb3Auth();
+  const { web3auth, provider, accountId, nearConnection, loginWithProvider, logout } = useWeb3Auth();
   const [newGreeting, setNewGreeting] = useState('');
   const [currentGreeting, setCurrentGreeting] = useState('');
   const [error, setError] = useState('');
@@ -97,7 +97,7 @@ export default function Home() {
         <h3>Update Greeting</h3>
         {!web3auth?.connected ? (
           <div className="alert alert-warning">
-            Please connect your wallet to interact with the contract
+            Please connect your wallet using one of the options in the navigation bar
           </div>
         ) : (
           <div className="card p-3">
@@ -135,6 +135,16 @@ export default function Home() {
             </button>
           </div>
         )}
+      </div>
+
+      {/* Testing Logout Button */}
+      <div className="fixed-bottom p-4 text-center bg-light">
+        <button 
+          className="btn btn-danger"
+          onClick={logout}
+        >
+          Force Logout (Testing)
+        </button>
       </div>
     </div>
   );

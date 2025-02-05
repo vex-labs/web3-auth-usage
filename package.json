@@ -24,7 +24,7 @@
     "@near-wallet-selector/sender": "^8.9.13",
     "@web3auth/base": "^9.5.3",
     "@web3auth/base-provider": "^9.5.3",
-    "@web3auth/modal": "^9.5.3",
+    "@web3auth/no-modal": "^9.5.3",
     "@web3modal/wagmi": "^5.1.10",
     "bootstrap": "^5",
     "bootstrap-icons": "^1.11.3",
