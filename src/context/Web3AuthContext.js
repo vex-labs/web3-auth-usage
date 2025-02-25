@@ -24,33 +24,80 @@ const privateKeyProvider = new CommonPrivateKeyProvider({
   config: { chainConfig: chainConfig },
 });
 
-if (!process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID) {
-  throw new Error('Please set NEXT_PUBLIC_WEB3AUTH_CLIENT_ID in your .env.local file');
-}
-
-const web3auth = new Web3AuthNoModal({
-  clientId: process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID,
-  web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_DEVNET,
-  privateKeyProvider: privateKeyProvider,
-});
-
-const authAdapter = new AuthAdapter();
-web3auth.configureAdapter(authAdapter);
-
 export function Web3AuthProvider({ children }) {
   const [provider, setProvider] = useState(null);
-  const [accountId, setAccountId] = useState(null);
+  const [accountId, setAccountId] = useState(null);  // Initialize as null initially
   const [nearConnection, setNearConnection] = useState(null);
+  const [web3auth, setWeb3auth] = useState(null);
+  const [isClientLoaded, setIsClientLoaded] = useState(false);
+  const [namedAccountId, setNamedAccountId] = useState(null);
+
+  // Handle client-side initialization
+  useEffect(() => {
+    setIsClientLoaded(true);
+    const storedAccountId = localStorage.getItem('web3auth_accountId');
+    if (storedAccountId) {
+      setAccountId(storedAccountId);
+    }
+  }, []);
+
+  // Restore session on mount
+  useEffect(() => {
+    const restoreSession = async () => {
+      if (!isClientLoaded) return;
+      
+      try {
+        const storedAccountId = localStorage.getItem('web3auth_accountId');
+        const storedPrivateKey = localStorage.getItem('web3auth_private_key');
+        
+        if (storedAccountId && storedPrivateKey && web3auth) {
+          const privateKeyEd25519Buffer = Buffer.from(storedPrivateKey, "hex");
+          const bs58encode = utils.serialize.base_encode(privateKeyEd25519Buffer);
+          const keyPair = KeyPair.fromString(`ed25519:${bs58encode}`);
+          
+          await setupNearConnection(keyPair, storedAccountId);
+          setAccountId(storedAccountId);
+        }
+      } catch (error) {
+        console.error("Error restoring session:", error);
+        localStorage.removeItem('web3auth_accountId');
+        localStorage.removeItem('web3auth_private_key');
+      }
+    };
+
+    if (web3auth) {
+      restoreSession();
+    }
+  }, [web3auth, isClientLoaded]);
 
   useEffect(() => {
-    const init = async () => {
+    const initWeb3Auth = async () => {
       try {
-        await web3auth.init();
+        // Fetch client ID from API
+        const response = await fetch('/api/auth/web3auth-config');
+        const { clientId } = await response.json();
+
+        if (!clientId) {
+          throw new Error('Failed to get Web3Auth client ID');
+        }
+
+        const web3authInstance = new Web3AuthNoModal({
+          clientId,
+          web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_DEVNET,
+          privateKeyProvider: privateKeyProvider,
+        });
+
+        const authAdapter = new AuthAdapter();
+        web3authInstance.configureAdapter(authAdapter);
+
+        await web3authInstance.init();
+        setWeb3auth(web3authInstance);
       } catch (error) {
         console.error("Error initializing Web3Auth:", error);
       }
     };
-    init();
+
+    initWeb3Auth();
   }, []);
 
   const setupNearConnection = async (keyPair, newAccountId) => {
@@ -88,6 +135,16 @@ export function Web3AuthProvider({ children }) {
       const pk58 = publicKey.data;
       const newAccountId = Buffer.from(pk58 || []).toString("hex");
       
+      // Safely store credentials in localStorage
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('web3auth_accountId', newAccountId);
+          localStorage.setItem('web3auth_private_key', privateKeyEd25519);
+        } catch (error) {
+          console.error('Failed to store credentials in localStorage:', error);
+        }
+      }
+      
       await setupNearConnection(keyPair, newAccountId);
       setAccountId(newAccountId);
       return { accountId: newAccountId };
@@ -97,10 +154,11 @@ export function Web3AuthProvider({ children }) {
     }
   };
 
-  const loginWithProvider = async (loginProvider) => {
+  const loginWithProvider = async (loginProvider, extraLoginOptions = {}) => {
     try {
       const web3authProvider = await web3auth.connectTo(WALLET_ADAPTERS.AUTH, {
         loginProvider: loginProvider,
+        ...extraLoginOptions
       });
       setProvider(web3authProvider);
       await getNearCredentials(web3authProvider);
@@ -113,11 +171,20 @@ export function Web3AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      if (web3auth.connected) {
+      if (web3auth?.connected) {
         await web3auth.logout();
         setProvider(null);
         setAccountId(null);
         setNearConnection(null);
+        // Safely clear stored credentials
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.removeItem('web3auth_accountId');
+            localStorage.removeItem('web3auth_private_key');
+          } catch (error) {
+            console.error('Failed to clear localStorage:', error);
+          }
+        }
       }
     } catch (error) {
       console.error("Logout failed:", error);
@@ -130,6 +197,8 @@ export function Web3AuthProvider({ children }) {
       web3auth,
       provider,
       accountId,
+      namedAccountId,
+      setNamedAccountId,
       nearConnection,
       loginWithProvider,
       logout

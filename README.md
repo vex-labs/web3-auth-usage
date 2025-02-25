@@ -5,5 +5,5 @@ This lets you login with Google, Discord, or your NEAR wallet.
 Add the client ID to your .env
 
 ```env
-NEXT_PUBLIC_WEB3AUTH_CLIENT_ID=""
+WEB3AUTH_CLIENT_ID=""
 ```
