@@ -24,6 +24,9 @@ const privateKeyProvider = new CommonPrivateKeyProvider({
   config: { chainConfig: chainConfig },
 });
 
+// Hardcoded client ID
+const WEB3AUTH_CLIENT_ID = "BIRCIM9LCVCfgVKRGDKoJ55C79fnrhiBl5pfCdLn-EpOabYsG9phL6AALWYiJNmshPBGpKRaVmSn0-f_nDd1nog";
+
 export function Web3AuthProvider({ children }) {
   const [provider, setProvider] = useState(null);
   const [accountId, setAccountId] = useState(null);  // Initialize as null initially
@@ -73,16 +76,8 @@ export function Web3AuthProvider({ children }) {
   useEffect(() => {
     const initWeb3Auth = async () => {
       try {
-        // Fetch client ID from API
-        const response = await fetch('/api/auth/web3auth-config');
-        const { clientId } = await response.json();
-
-        if (!clientId) {
-          throw new Error('Failed to get Web3Auth client ID');
-        }
-
         const web3authInstance = new Web3AuthNoModal({
-          clientId,
+          clientId: WEB3AUTH_CLIENT_ID, // Use hardcoded client ID
           web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_DEVNET,
           privateKeyProvider: privateKeyProvider,
         });
