@@ -32,8 +32,30 @@ export function NearProvider({ children }) {
         networkId: NetworkId,
       });
 
-      const accountId = await newWallet.startUp((signedAccountId) => {
+      const accountId = await newWallet.startUp(async (signedAccountId) => {
         const newSignedAccountId = signedAccountId || "";
+
+        // If user signed in with wallet, create/verify their DB entry
+        if (newSignedAccountId) {
+          try {
+            const response = await fetch("/api/auth/create-wallet-user", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                accountId: newSignedAccountId,
+              }),
+            });
+
+            if (!response.ok) {
+              console.error("Failed to create wallet user in database");
+            }
+          } catch (error) {
+            console.error("Error creating wallet user:", error);
+          }
+        }
+
         setSignedAccountId(newSignedAccountId);
         localStorage.setItem("near_signed_account_id", newSignedAccountId);
       });

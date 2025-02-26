@@ -39,7 +39,6 @@ export const Navigation = () => {
     try {
       await loginWithProvider(provider, options);
       setIsLoginModalOpen(false);
-      // CreateAccountModal will automatically show due to the effect above
     } catch (error) {
       console.error("Login failed:", error);
     }
@@ -52,8 +51,6 @@ export const Navigation = () => {
 
   const isLoggedIn =
     isClientLoaded && (web3auth?.connected || !!signedAccountId);
-
-  const displayName = signedAccountId || accountId;
 
   const handleLogout = async () => {
     if (web3auth?.connected) {

@@ -36,6 +36,7 @@ export const CreateAccountModal = ({ isOpen, onClose, onAccountCreated }) => {
     try {
       const publicKey = keyPair.getPublicKey().toString();
 
+      // Route to create account in db
       const response = await fetch("/api/auth/create-account", {
         method: "POST",
         headers: {

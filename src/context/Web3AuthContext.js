@@ -10,6 +10,7 @@ import {
 import { connect, KeyPair, keyStores, utils } from "near-api-js";
 import { getED25519Key } from "@web3auth/base-provider";
 
+// Set up web3 auth stuff
 const Web3AuthContext = createContext({});
 
 const chainConfig = {
@@ -28,7 +29,6 @@ const privateKeyProvider = new CommonPrivateKeyProvider({
   config: { chainConfig: chainConfig },
 });
 
-// Hardcoded client ID
 const WEB3AUTH_CLIENT_ID = process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID;
 
 export function Web3AuthProvider({ children }) {
@@ -49,14 +49,13 @@ export function Web3AuthProvider({ children }) {
     }
   }, []);
 
-  // Modified restore session to only restore keypair
+  // Restore session to only restore keypair
   useEffect(() => {
     const restoreSession = async () => {
       if (!isClientLoaded || !keyPair || !web3auth) return;
 
       try {
         const storedAccountId = localStorage.getItem("accountId");
-        const storedNamedAccountId = localStorage.getItem("namedAccountId");
 
         if (storedAccountId) {
           await setupNearConnection(keyPair, storedAccountId);
@@ -64,7 +63,7 @@ export function Web3AuthProvider({ children }) {
         }
 
         // If we have a keypair but no account, we need to force account creation
-        if (!storedAccountId && !storedNamedAccountId) {
+        if (!storedAccountId) {
           // The CreateAccountModal will show automatically due to the effect in Navigation
           return;
         }
@@ -73,7 +72,6 @@ export function Web3AuthProvider({ children }) {
         // Clear everything if there's an error
         localStorage.removeItem("web3auth_keypair");
         localStorage.removeItem("accountId");
-        localStorage.removeItem("namedAccountId");
         setKeyPair(null);
         setAccountId(null);
       }
@@ -84,6 +82,7 @@ export function Web3AuthProvider({ children }) {
     }
   }, [web3auth, isClientLoaded, keyPair]);
 
+  // Initialize web3 auth
   useEffect(() => {
     const initWeb3Auth = async () => {
       try {
@@ -106,6 +105,7 @@ export function Web3AuthProvider({ children }) {
     initWeb3Auth();
   }, []);
 
+  // Set up near connection
   const setupNearConnection = async (keyPair, newAccountId) => {
     try {
       const myKeyStore = new keyStores.InMemoryKeyStore();
@@ -129,6 +129,7 @@ export function Web3AuthProvider({ children }) {
     }
   };
 
+  // Get near key from web3auth provider
   const getNearCredentials = async (web3authProvider) => {
     try {
       const privateKey = await web3authProvider.request({
@@ -157,16 +158,13 @@ export function Web3AuthProvider({ children }) {
     }
   };
 
-  // Add a new function to set up account
+  // Set up near account object
   const setupAccount = async (accountId, providedKeyPair = null) => {
     try {
       // Use provided keyPair if available, otherwise use state keyPair
       const keyPairToUse = providedKeyPair || keyPair;
 
       if (!keyPairToUse) throw new Error("No keypair available");
-
-      console.log("keyPairToUse", keyPairToUse);
-      console.log("accountId", accountId);
 
       await setupNearConnection(keyPairToUse, accountId);
       setAccountId(accountId);
@@ -181,6 +179,7 @@ export function Web3AuthProvider({ children }) {
     }
   };
 
+  // Login with web3 auth provider
   const loginWithProvider = async (loginProvider, extraLoginOptions = {}) => {
     try {
       const web3authProvider = await web3auth.connectTo(WALLET_ADAPTERS.AUTH, {
@@ -213,7 +212,6 @@ export function Web3AuthProvider({ children }) {
 
       // If no account exists, the CreateAccountModal will show automatically
       // due to the effect in Navigation component that checks for
-      // keyPair && !accountId && !namedAccountId && !signedAccountId
       return web3authProvider;
     } catch (error) {
       console.error(`Login with ${loginProvider} failed:`, error);
@@ -221,6 +219,7 @@ export function Web3AuthProvider({ children }) {
     }
   };
 
+  // Logout web3auth provider
   const logout = async () => {
     try {
       if (web3auth?.connected) {
@@ -234,7 +233,6 @@ export function Web3AuthProvider({ children }) {
           try {
             localStorage.removeItem("web3auth_keypair");
             localStorage.removeItem("accountId");
-            localStorage.removeItem("namedAccountId");
           } catch (error) {
             console.error("Failed to clear localStorage:", error);
           }
