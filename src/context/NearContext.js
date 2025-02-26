@@ -17,7 +17,7 @@ export function NearProvider({ children }) {
   // Handle client-side initialization
   useEffect(() => {
     setIsClientLoaded(true);
-    const storedAccountId = localStorage.getItem('near_signed_account_id');
+    const storedAccountId = localStorage.getItem("near_signed_account_id");
     if (storedAccountId) {
       setSignedAccountId(storedAccountId);
     }
@@ -35,13 +35,13 @@ export function NearProvider({ children }) {
       const accountId = await newWallet.startUp((signedAccountId) => {
         const newSignedAccountId = signedAccountId || "";
         setSignedAccountId(newSignedAccountId);
-        localStorage.setItem('near_signed_account_id', newSignedAccountId);
+        localStorage.setItem("near_signed_account_id", newSignedAccountId);
       });
 
       setWallet(newWallet);
       setSignedAccountId(accountId || "");
       if (accountId) {
-        localStorage.setItem('near_signed_account_id', accountId);
+        localStorage.setItem("near_signed_account_id", accountId);
       }
     };
 
@@ -57,4 +57,4 @@ export function NearProvider({ children }) {
 
 export function useNear() {
   return useContext(NearContext);
-} 
+}

@@ -1,20 +1,20 @@
-import React, { useState } from 'react';
-import { useNear } from '../context/NearContext';
-import { useWeb3Auth } from '../context/Web3AuthContext';
+import React, { useState } from "react";
+import { useNear } from "../context/NearContext";
+import { useWeb3Auth } from "../context/Web3AuthContext";
 
 export const LoginModal = ({ isOpen, onClose, onLoginWithProvider }) => {
   const { wallet } = useNear();
   const { web3auth } = useWeb3Auth();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  
+
   if (!isOpen) return null;
   if (!web3auth) return null;
 
   const handleEmailLogin = async (e) => {
     e.preventDefault();
     if (!email) return;
-    
+
     setIsLoading(true);
     try {
       await onLoginWithProvider("email_passwordless", { login_hint: email });
@@ -27,14 +27,20 @@ export const LoginModal = ({ isOpen, onClose, onLoginWithProvider }) => {
   };
 
   return (
-    <div className="modal d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+    <div
+      className="modal d-block"
+      tabIndex="-1"
+      style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+    >
       <div className="modal-dialog modal-dialog-centered">
         <div className="modal-content">
           <div className="modal-header">
-            <h5 className="modal-title" style={{ color: '#000000' }}>Log in</h5>
-            <button 
-              type="button" 
-              className="btn-close" 
+            <h5 className="modal-title" style={{ color: "#000000" }}>
+              Log in
+            </h5>
+            <button
+              type="button"
+              className="btn-close"
               onClick={onClose}
               aria-label="Close"
             ></button>
@@ -42,15 +48,15 @@ export const LoginModal = ({ isOpen, onClose, onLoginWithProvider }) => {
           <div className="modal-body">
             <div className="mb-4">
               <h6 className="mb-3">Social Login</h6>
-              
+
               {/* Google Login - Large Button */}
-              <button 
+              <button
                 className="btn btn-lg w-100 mb-3 d-flex align-items-center justify-content-center gap-2"
                 onClick={() => {
                   onLoginWithProvider("google");
                   onClose();
                 }}
-                style={{ backgroundColor: '#ff69b4', color: 'white' }}
+                style={{ backgroundColor: "#ff69b4", color: "white" }}
               >
                 <i className="bi bi-google"></i>
                 Continue with Google
@@ -59,7 +65,7 @@ export const LoginModal = ({ isOpen, onClose, onLoginWithProvider }) => {
               {/* Social Logins Grid */}
               <div className="row g-2">
                 <div className="col-6">
-                  <button 
+                  <button
                     className="btn btn-info w-100 d-flex align-items-center justify-content-center gap-2"
                     onClick={() => {
                       onLoginWithProvider("discord");
@@ -71,7 +77,7 @@ export const LoginModal = ({ isOpen, onClose, onLoginWithProvider }) => {
                   </button>
                 </div>
                 <div className="col-6">
-                  <button 
+                  <button
                     className="btn btn-dark w-100 d-flex align-items-center justify-content-center gap-2"
                     onClick={() => {
                       onLoginWithProvider("twitter");
@@ -83,7 +89,7 @@ export const LoginModal = ({ isOpen, onClose, onLoginWithProvider }) => {
                   </button>
                 </div>
                 <div className="col-6">
-                  <button 
+                  <button
                     className="btn btn-danger w-100 d-flex align-items-center justify-content-center gap-2"
                     onClick={() => {
                       onLoginWithProvider("reddit");
@@ -95,7 +101,7 @@ export const LoginModal = ({ isOpen, onClose, onLoginWithProvider }) => {
                   </button>
                 </div>
                 <div className="col-6">
-                  <button 
+                  <button
                     className="btn btn-purple w-100 d-flex align-items-center justify-content-center gap-2"
                     onClick={() => {
                       onLoginWithProvider("twitch");
@@ -107,7 +113,7 @@ export const LoginModal = ({ isOpen, onClose, onLoginWithProvider }) => {
                   </button>
                 </div>
                 <div className="col-6">
-                  <button 
+                  <button
                     className="btn btn-dark w-100 d-flex align-items-center justify-content-center gap-2"
                     onClick={() => {
                       onLoginWithProvider("apple");
@@ -119,7 +125,7 @@ export const LoginModal = ({ isOpen, onClose, onLoginWithProvider }) => {
                   </button>
                 </div>
                 <div className="col-6">
-                  <button 
+                  <button
                     className="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2"
                     onClick={() => {
                       onLoginWithProvider("facebook");
@@ -154,13 +160,13 @@ export const LoginModal = ({ isOpen, onClose, onLoginWithProvider }) => {
                     required
                   />
                 </div>
-                <button 
+                <button
                   type="submit"
                   className="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2"
                   disabled={isLoading}
                 >
                   <i className="bi bi-envelope"></i>
-                  {isLoading ? 'Sending...' : 'Continue with Email'}
+                  {isLoading ? "Sending..." : "Continue with Email"}
                 </button>
               </form>
 
@@ -175,7 +181,7 @@ export const LoginModal = ({ isOpen, onClose, onLoginWithProvider }) => {
 
               <div>
                 <h6 className="mb-3">Wallet Login</h6>
-                <button 
+                <button
                   className="btn btn-secondary btn-lg w-100 d-flex align-items-center justify-content-center gap-2"
                   onClick={() => {
                     wallet?.signIn();
@@ -189,9 +195,9 @@ export const LoginModal = ({ isOpen, onClose, onLoginWithProvider }) => {
             </div>
           </div>
           <div className="modal-footer">
-            <button 
-              type="button" 
-              className="btn btn-secondary" 
+            <button
+              type="button"
+              className="btn btn-secondary"
               onClick={onClose}
             >
               Close
@@ -201,4 +207,4 @@ export const LoginModal = ({ isOpen, onClose, onLoginWithProvider }) => {
       </div>
     </div>
   );
-}; 
+};

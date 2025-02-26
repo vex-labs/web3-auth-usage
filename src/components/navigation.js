@@ -1,14 +1,22 @@
-import { useState, useEffect } from 'react';
-import { useWeb3Auth } from '@/context/Web3AuthContext';
-import { useNear } from '@/context/NearContext';
-import { LoginModal } from './LoginModal';
-import { CreateAccountModal } from './CreateAccountModal';
+import { useState, useEffect } from "react";
+import { useWeb3Auth } from "@/context/Web3AuthContext";
+import { useNear } from "@/context/NearContext";
+import { LoginModal } from "./LoginModal";
+import { CreateAccountModal } from "./CreateAccountModal";
 
 export const Navigation = () => {
-  const { web3auth, loginWithProvider, logout: web3authLogout, accountId, setAccountId, keyPair } = useWeb3Auth();
+  const {
+    web3auth,
+    loginWithProvider,
+    logout: web3authLogout,
+    accountId,
+    setAccountId,
+    keyPair,
+  } = useWeb3Auth();
   const { wallet, signedAccountId } = useNear();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [isCreateAccountModalOpen, setIsCreateAccountModalOpen] = useState(false);
+  const [isCreateAccountModalOpen, setIsCreateAccountModalOpen] =
+    useState(false);
   const [isClientLoaded, setIsClientLoaded] = useState(false);
 
   // Check localStorage after component mounts on client
@@ -42,10 +50,8 @@ export const Navigation = () => {
     setIsCreateAccountModalOpen(false);
   };
 
-  const isLoggedIn = isClientLoaded && (
-    web3auth?.connected || 
-    !!signedAccountId
-  );
+  const isLoggedIn =
+    isClientLoaded && (web3auth?.connected || !!signedAccountId);
 
   const displayName = signedAccountId || accountId;
 
@@ -55,7 +61,7 @@ export const Navigation = () => {
     }
     if (signedAccountId) {
       await wallet.signOut();
-      localStorage.removeItem('near_signed_account_id');
+      localStorage.removeItem("near_signed_account_id");
     }
   };
 
@@ -68,9 +74,9 @@ export const Navigation = () => {
     <>
       <nav className="navbar navbar-expand-lg">
         <div className="container-fluid">
-          <div className='navbar-nav pt-1'>
+          <div className="navbar-nav pt-1">
             {!isLoggedIn ? (
-              <button 
+              <button
                 className="btn btn-secondary"
                 onClick={() => setIsLoginModalOpen(true)}
               >
@@ -85,7 +91,7 @@ export const Navigation = () => {
         </div>
       </nav>
 
-      <LoginModal 
+      <LoginModal
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
         onLoginWithProvider={handleLoginWithProvider}

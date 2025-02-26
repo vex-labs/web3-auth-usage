@@ -1,18 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { useWeb3Auth } from '../context/Web3AuthContext';
+import React, { useState, useEffect } from "react";
+import { useWeb3Auth } from "../context/Web3AuthContext";
 
 export const CreateAccountModal = ({ isOpen, onClose, onAccountCreated }) => {
   const { keyPair, setupAccount, logout } = useWeb3Auth();
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [isAccountCreated, setIsAccountCreated] = useState(false);
 
   // Reset states when modal opens
   useEffect(() => {
     if (isOpen) {
       setIsAccountCreated(false);
-      setError('');
+      setError("");
     }
   }, [isOpen]);
 
@@ -22,7 +22,7 @@ export const CreateAccountModal = ({ isOpen, onClose, onAccountCreated }) => {
     if (!isAccountCreated && !username) {
       logout();
     }
-    setUsername(''); // Clear the username when closing
+    setUsername(""); // Clear the username when closing
     onClose();
   };
 
@@ -31,26 +31,28 @@ export const CreateAccountModal = ({ isOpen, onClose, onAccountCreated }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
+    setError("");
 
     try {
       const publicKey = keyPair.getPublicKey().toString();
-      
-      const response = await fetch('/api/auth/create-account', {
-        method: 'POST',
+
+      const response = await fetch("/api/auth/create-account", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           username: username.toLowerCase(),
-          publicKey
+          publicKey,
         }),
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
-        throw new Error(`Failed to create account: ${data.error}${data.details ? ` (${JSON.stringify(data.details)})` : ''}`);
+        throw new Error(
+          `Failed to create account: ${data.error}${data.details ? ` (${JSON.stringify(data.details)})` : ""}`,
+        );
       }
 
       await setupAccount(data.accountId);
@@ -66,12 +68,23 @@ export const CreateAccountModal = ({ isOpen, onClose, onAccountCreated }) => {
   };
 
   return (
-    <div className="modal d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+    <div
+      className="modal d-block"
+      tabIndex="-1"
+      style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+    >
       <div className="modal-dialog modal-dialog-centered">
         <div className="modal-content">
           <div className="modal-header">
-            <h5 className="modal-title" style={{ color: '#000000' }}>Create Your Account Name</h5>
-            <button type="button" className="btn-close" onClick={handleClose} aria-label="Close"></button>
+            <h5 className="modal-title" style={{ color: "#000000" }}>
+              Create Your Account Name
+            </h5>
+            <button
+              type="button"
+              className="btn-close"
+              onClick={handleClose}
+              aria-label="Close"
+            ></button>
           </div>
           <div className="modal-body">
             <form onSubmit={handleSubmit}>
@@ -86,16 +99,17 @@ export const CreateAccountModal = ({ isOpen, onClose, onAccountCreated }) => {
                   required
                 />
                 <div className="form-text">
-                  Your full account will be: {username ? `${username}.users.betvex.testnet` : ''}
+                  Your full account will be:{" "}
+                  {username ? `${username}.users.betvex.testnet` : ""}
                 </div>
               </div>
               {error && <div className="alert alert-danger">{error}</div>}
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 className="btn btn-primary w-100"
                 disabled={isLoading || !keyPair}
               >
-                {isLoading ? 'Creating...' : 'Create Account'}
+                {isLoading ? "Creating..." : "Create Account"}
               </button>
             </form>
           </div>
@@ -103,4 +117,4 @@ export const CreateAccountModal = ({ isOpen, onClose, onAccountCreated }) => {
       </div>
     </div>
   );
-}; 
+};

@@ -1,8 +1,12 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from "react";
 import { Web3AuthNoModal } from "@web3auth/no-modal";
 import { AuthAdapter } from "@web3auth/auth-adapter";
 import { CommonPrivateKeyProvider } from "@web3auth/base-provider";
-import { WEB3AUTH_NETWORK, CHAIN_NAMESPACES, WALLET_ADAPTERS } from "@web3auth/base";
+import {
+  WEB3AUTH_NETWORK,
+  CHAIN_NAMESPACES,
+  WALLET_ADAPTERS,
+} from "@web3auth/base";
 import { connect, KeyPair, keyStores, utils } from "near-api-js";
 import { getED25519Key } from "@web3auth/base-provider";
 
@@ -25,7 +29,7 @@ const privateKeyProvider = new CommonPrivateKeyProvider({
 });
 
 // Hardcoded client ID
-const WEB3AUTH_CLIENT_ID = "BIRCIM9LCVCfgVKRGDKoJ55C79fnrhiBl5pfCdLn-EpOabYsG9phL6AALWYiJNmshPBGpKRaVmSn0-f_nDd1nog";
+const WEB3AUTH_CLIENT_ID = process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID;
 
 export function Web3AuthProvider({ children }) {
   const [provider, setProvider] = useState(null);
@@ -38,7 +42,7 @@ export function Web3AuthProvider({ children }) {
   // Handle client-side initialization and restore keypair
   useEffect(() => {
     setIsClientLoaded(true);
-    const storedKeyPair = localStorage.getItem('web3auth_keypair');
+    const storedKeyPair = localStorage.getItem("web3auth_keypair");
     if (storedKeyPair) {
       const restoredKeyPair = KeyPair.fromString(storedKeyPair);
       setKeyPair(restoredKeyPair);
@@ -49,16 +53,16 @@ export function Web3AuthProvider({ children }) {
   useEffect(() => {
     const restoreSession = async () => {
       if (!isClientLoaded || !keyPair || !web3auth) return;
-      
+
       try {
-        const storedAccountId = localStorage.getItem('accountId');
-        const storedNamedAccountId = localStorage.getItem('namedAccountId');
-        
+        const storedAccountId = localStorage.getItem("accountId");
+        const storedNamedAccountId = localStorage.getItem("namedAccountId");
+
         if (storedAccountId) {
           await setupNearConnection(keyPair, storedAccountId);
           setAccountId(storedAccountId);
         }
-        
+
         // If we have a keypair but no account, we need to force account creation
         if (!storedAccountId && !storedNamedAccountId) {
           // The CreateAccountModal will show automatically due to the effect in Navigation
@@ -67,9 +71,9 @@ export function Web3AuthProvider({ children }) {
       } catch (error) {
         console.error("Error restoring session:", error);
         // Clear everything if there's an error
-        localStorage.removeItem('web3auth_keypair');
-        localStorage.removeItem('accountId');
-        localStorage.removeItem('namedAccountId');
+        localStorage.removeItem("web3auth_keypair");
+        localStorage.removeItem("accountId");
+        localStorage.removeItem("namedAccountId");
         setKeyPair(null);
         setAccountId(null);
       }
@@ -106,7 +110,7 @@ export function Web3AuthProvider({ children }) {
     try {
       const myKeyStore = new keyStores.InMemoryKeyStore();
       await myKeyStore.setKey("testnet", newAccountId, keyPair);
-      
+
       const connectionConfig = {
         networkId: "testnet",
         keyStore: myKeyStore,
@@ -127,22 +131,24 @@ export function Web3AuthProvider({ children }) {
 
   const getNearCredentials = async (web3authProvider) => {
     try {
-      const privateKey = await web3authProvider.request({ method: "private_key" });
+      const privateKey = await web3authProvider.request({
+        method: "private_key",
+      });
       const privateKeyEd25519 = getED25519Key(privateKey).sk.toString("hex");
       const privateKeyEd25519Buffer = Buffer.from(privateKeyEd25519, "hex");
       const bs58encode = utils.serialize.base_encode(privateKeyEd25519Buffer);
       const newKeyPair = KeyPair.fromString(`ed25519:${bs58encode}`);
       setKeyPair(newKeyPair);
-      
+
       // Store only the keypair in localStorage
-      if (typeof window !== 'undefined') {
+      if (typeof window !== "undefined") {
         try {
-          localStorage.setItem('web3auth_keypair', newKeyPair.toString());
+          localStorage.setItem("web3auth_keypair", newKeyPair.toString());
         } catch (error) {
-          console.error('Failed to store keypair in localStorage:', error);
+          console.error("Failed to store keypair in localStorage:", error);
         }
       }
-      
+
       // Don't setup connection yet - wait for account creation
       return { keyPair: newKeyPair };
     } catch (error) {
@@ -156,18 +162,18 @@ export function Web3AuthProvider({ children }) {
     try {
       // Use provided keyPair if available, otherwise use state keyPair
       const keyPairToUse = providedKeyPair || keyPair;
-      
+
       if (!keyPairToUse) throw new Error("No keypair available");
 
       console.log("keyPairToUse", keyPairToUse);
       console.log("accountId", accountId);
-      
+
       await setupNearConnection(keyPairToUse, accountId);
       setAccountId(accountId);
-      
+
       // Store account IDs in localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('accountId', accountId);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("accountId", accountId);
       }
     } catch (error) {
       console.error("Error setting up account:", error);
@@ -179,19 +185,20 @@ export function Web3AuthProvider({ children }) {
     try {
       const web3authProvider = await web3auth.connectTo(WALLET_ADAPTERS.AUTH, {
         loginProvider: loginProvider,
-        ...extraLoginOptions
+        ...extraLoginOptions,
       });
       setProvider(web3authProvider);
-      
+
       // Get credentials and check for existing account
-      const { keyPair: theKeyPair } = await getNearCredentials(web3authProvider);
+      const { keyPair: theKeyPair } =
+        await getNearCredentials(web3authProvider);
       const publicKey = theKeyPair.getPublicKey().toString();
-      
+
       // Check if account exists
-      const response = await fetch('/api/auth/check-for-account', {
-        method: 'POST',
+      const response = await fetch("/api/auth/check-for-account", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ publicKey }),
       });
@@ -203,12 +210,11 @@ export function Web3AuthProvider({ children }) {
         await setupAccount(data.accountId, theKeyPair);
         return web3authProvider;
       }
-      
+
       // If no account exists, the CreateAccountModal will show automatically
       // due to the effect in Navigation component that checks for
       // keyPair && !accountId && !namedAccountId && !signedAccountId
       return web3authProvider;
-
     } catch (error) {
       console.error(`Login with ${loginProvider} failed:`, error);
       throw error;
@@ -224,13 +230,13 @@ export function Web3AuthProvider({ children }) {
         setNearConnection(null);
         setKeyPair(null);
         // Clear storage
-        if (typeof window !== 'undefined') {
+        if (typeof window !== "undefined") {
           try {
-            localStorage.removeItem('web3auth_keypair');
-            localStorage.removeItem('accountId');
-            localStorage.removeItem('namedAccountId');
+            localStorage.removeItem("web3auth_keypair");
+            localStorage.removeItem("accountId");
+            localStorage.removeItem("namedAccountId");
           } catch (error) {
-            console.error('Failed to clear localStorage:', error);
+            console.error("Failed to clear localStorage:", error);
           }
         }
       }
@@ -241,17 +247,19 @@ export function Web3AuthProvider({ children }) {
   };
 
   return (
-    <Web3AuthContext.Provider value={{
-      web3auth,
-      provider,
-      accountId,
-      setAccountId,
-      nearConnection,
-      keyPair,
-      setupAccount,
-      loginWithProvider,
-      logout
-    }}>
+    <Web3AuthContext.Provider
+      value={{
+        web3auth,
+        provider,
+        accountId,
+        setAccountId,
+        nearConnection,
+        keyPair,
+        setupAccount,
+        loginWithProvider,
+        logout,
+      }}
+    >
       {children}
     </Web3AuthContext.Provider>
   );
@@ -260,7 +268,7 @@ export function Web3AuthProvider({ children }) {
 export function useWeb3Auth() {
   const context = useContext(Web3AuthContext);
   if (context === undefined) {
-    throw new Error('useWeb3Auth must be used within a Web3AuthProvider');
+    throw new Error("useWeb3Auth must be used within a Web3AuthProvider");
   }
   return context;
-} 
+}

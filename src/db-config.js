@@ -1,6 +1,6 @@
 export default {
-    dbName: "Store",
-    collections: {
-        users: "users"
-    }
+  dbName: "Store",
+  collections: {
+    users: "users",
+  },
 };
