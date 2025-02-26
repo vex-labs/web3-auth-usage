@@ -1,4 +1,4 @@
-export const config = {
+export default {
     dbName: "Store",
     collections: {
         users: "users"
