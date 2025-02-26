@@ -12,11 +12,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Validate username format
-    if (!/^[a-z0-9]+$/.test(username)) {
-      return res.status(400).json({ message: 'Username can only contain lowercase letters and numbers' });
-    }
-
     const keyStore = new keyStores.InMemoryKeyStore();
     const PRIVATE_KEY = process.env.USERS_ACCOUNT_PRIVATE_KEY;
     const ACCOUNT_ID = "users.betvex.testnet";
@@ -39,25 +34,54 @@ export default async function handler(req, res) {
     const newAccountId = `${username}.users.betvex.testnet`;
     
     try {
+      console.log('Attempting to create account:', {
+        newAccountId,
+        publicKey,
+        parentAccount: ACCOUNT_ID
+      });
+
       await account.createAccount(
         newAccountId,
-        publicKey, // This should now be a proper public key string
-        "0" // Initial balance of 0 NEAR
+        publicKey,
+        "0"
       );
       
       res.status(200).json({ accountId: newAccountId });
     } catch (createError) {
-      console.error("Account creation error:", createError);
-      if (createError.message.includes("already exists")) {
-        return res.status(400).json({ message: 'This username is already taken' });
-      }
-      throw createError;
+      console.error("Account creation error details:", {
+        error: createError.message,
+        stack: createError.stack,
+        type: createError.type,
+        cause: createError.cause
+      });
+      
+      return res.status(400).json({ 
+        message: 'Failed to create account',
+        error: createError.message,
+        details: {
+          accountId: newAccountId,
+          publicKey,
+          errorType: createError.type,
+          errorCause: createError.cause
+        }
+      });
     }
   } catch (error) {
-    console.error("Error creating account:", error);
+    console.error("Connection setup error details:", {
+      error: error.message,
+      stack: error.stack,
+      type: error.type,
+      cause: error.cause
+    });
+    
     res.status(500).json({ 
-      message: error.message || 'Failed to create account',
-      error: error.toString()
+      message: 'Failed to create account',
+      error: error.message,
+      details: {
+        errorType: error.type,
+        errorCause: error.cause,
+        phase: 'connection setup'
+      }
     });
   }
 } 

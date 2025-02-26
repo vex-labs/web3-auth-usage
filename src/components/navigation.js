@@ -5,28 +5,42 @@ import { LoginModal } from './LoginModal';
 import { CreateAccountModal } from './CreateAccountModal';
 
 export const Navigation = () => {
-  const { web3auth, loginWithProvider, logout: web3authLogout, accountId, namedAccountId, setNamedAccountId } = useWeb3Auth();
+  const { web3auth, loginWithProvider, logout: web3authLogout, accountId, namedAccountId, setNamedAccountId, keyPair } = useWeb3Auth();
   const { wallet, signedAccountId } = useNear();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isCreateAccountModalOpen, setIsCreateAccountModalOpen] = useState(false);
   const [isClientLoaded, setIsClientLoaded] = useState(false);
-  const [showCreateAccount, setShowCreateAccount] = useState(false);
 
   // Check localStorage after component mounts on client
   useEffect(() => {
     setIsClientLoaded(true);
   }, []);
 
-  // Handle successful login
+  // Show create account modal when keypair exists but no account ID
   useEffect(() => {
-    if (accountId && !namedAccountId && !signedAccountId) {
-      setShowCreateAccount(true);
+    if (isClientLoaded && keyPair && !accountId && !namedAccountId && !signedAccountId) {
+      setIsCreateAccountModalOpen(true);
     }
-  }, [accountId, namedAccountId, signedAccountId]);
+  }, [keyPair, accountId, namedAccountId, signedAccountId, isClientLoaded]);
+
+  const handleLoginWithProvider = async (provider, options) => {
+    try {
+      await loginWithProvider(provider, options);
+      setIsLoginModalOpen(false);
+      // CreateAccountModal will automatically show due to the effect above
+    } catch (error) {
+      console.error("Login failed:", error);
+    }
+  };
+
+  const handleAccountCreated = (newAccountId) => {
+    setNamedAccountId(newAccountId);
+    setIsCreateAccountModalOpen(false);
+  };
 
   const isLoggedIn = isClientLoaded && (
     web3auth?.connected || 
-    !!signedAccountId || 
-    !!localStorage.getItem('web3auth_accountId')
+    !!signedAccountId
   );
 
   const displayName = signedAccountId || namedAccountId || accountId;
@@ -54,7 +68,7 @@ export const Navigation = () => {
             {!isLoggedIn ? (
               <button 
                 className="btn btn-secondary"
-                onClick={() => setIsModalOpen(true)}
+                onClick={() => setIsLoginModalOpen(true)}
               >
                 Log in
               </button>
@@ -68,18 +82,15 @@ export const Navigation = () => {
       </nav>
 
       <LoginModal 
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onLoginWithProvider={loginWithProvider}
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onLoginWithProvider={handleLoginWithProvider}
       />
 
       <CreateAccountModal
-        isOpen={showCreateAccount}
-        onClose={() => setShowCreateAccount(false)}
-        onAccountCreated={(newAccountId) => {
-          setNamedAccountId(newAccountId);
-          setShowCreateAccount(false);
-        }}
+        isOpen={isCreateAccountModalOpen}
+        onClose={() => setIsCreateAccountModalOpen(false)}
+        onAccountCreated={handleAccountCreated}
       />
     </>
   );

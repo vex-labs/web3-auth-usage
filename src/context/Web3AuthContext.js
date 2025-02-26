@@ -29,49 +29,62 @@ const WEB3AUTH_CLIENT_ID = "BIRCIM9LCVCfgVKRGDKoJ55C79fnrhiBl5pfCdLn-EpOabYsG9ph
 
 export function Web3AuthProvider({ children }) {
   const [provider, setProvider] = useState(null);
-  const [accountId, setAccountId] = useState(null);  // Initialize as null initially
+  const [accountId, setAccountId] = useState(null);
   const [nearConnection, setNearConnection] = useState(null);
   const [web3auth, setWeb3auth] = useState(null);
   const [isClientLoaded, setIsClientLoaded] = useState(false);
   const [namedAccountId, setNamedAccountId] = useState(null);
+  const [keyPair, setKeyPair] = useState(null);
 
-  // Handle client-side initialization
+  // Handle client-side initialization and restore keypair
   useEffect(() => {
     setIsClientLoaded(true);
-    const storedAccountId = localStorage.getItem('web3auth_accountId');
-    if (storedAccountId) {
-      setAccountId(storedAccountId);
+    const storedKeyPair = localStorage.getItem('web3auth_keypair');
+    if (storedKeyPair) {
+      const restoredKeyPair = KeyPair.fromString(storedKeyPair);
+      setKeyPair(restoredKeyPair);
     }
   }, []);
 
-  // Restore session on mount
+  // Modified restore session to only restore keypair
   useEffect(() => {
     const restoreSession = async () => {
-      if (!isClientLoaded) return;
+      if (!isClientLoaded || !keyPair || !web3auth) return;
       
       try {
-        const storedAccountId = localStorage.getItem('web3auth_accountId');
-        const storedPrivateKey = localStorage.getItem('web3auth_private_key');
+        const storedAccountId = localStorage.getItem('accountId');
+        const storedNamedAccountId = localStorage.getItem('namedAccountId');
         
-        if (storedAccountId && storedPrivateKey && web3auth) {
-          const privateKeyEd25519Buffer = Buffer.from(storedPrivateKey, "hex");
-          const bs58encode = utils.serialize.base_encode(privateKeyEd25519Buffer);
-          const keyPair = KeyPair.fromString(`ed25519:${bs58encode}`);
-          
+        if (storedAccountId) {
           await setupNearConnection(keyPair, storedAccountId);
           setAccountId(storedAccountId);
         }
+        
+        if (storedNamedAccountId) {
+          setNamedAccountId(storedNamedAccountId);
+        }
+        
+        // If we have a keypair but no account, we need to force account creation
+        if (!storedAccountId && !storedNamedAccountId) {
+          // The CreateAccountModal will show automatically due to the effect in Navigation
+          return;
+        }
       } catch (error) {
         console.error("Error restoring session:", error);
-        localStorage.removeItem('web3auth_accountId');
-        localStorage.removeItem('web3auth_private_key');
+        // Clear everything if there's an error
+        localStorage.removeItem('web3auth_keypair');
+        localStorage.removeItem('accountId');
+        localStorage.removeItem('namedAccountId');
+        setKeyPair(null);
+        setAccountId(null);
+        setNamedAccountId(null);
       }
     };
 
     if (web3auth) {
       restoreSession();
     }
-  }, [web3auth, isClientLoaded]);
+  }, [web3auth, isClientLoaded, keyPair]);
 
   useEffect(() => {
     const initWeb3Auth = async () => {
@@ -124,27 +137,38 @@ export function Web3AuthProvider({ children }) {
       const privateKeyEd25519 = getED25519Key(privateKey).sk.toString("hex");
       const privateKeyEd25519Buffer = Buffer.from(privateKeyEd25519, "hex");
       const bs58encode = utils.serialize.base_encode(privateKeyEd25519Buffer);
-      const keyPair = KeyPair.fromString(`ed25519:${bs58encode}`);
+      const newKeyPair = KeyPair.fromString(`ed25519:${bs58encode}`);
+      setKeyPair(newKeyPair);
       
-      const publicKey = keyPair.getPublicKey();
-      const pk58 = publicKey.data;
-      const newAccountId = Buffer.from(pk58 || []).toString("hex");
-      
-      // Safely store credentials in localStorage
+      // Store only the keypair in localStorage
       if (typeof window !== 'undefined') {
         try {
-          localStorage.setItem('web3auth_accountId', newAccountId);
-          localStorage.setItem('web3auth_private_key', privateKeyEd25519);
+          localStorage.setItem('web3auth_keypair', newKeyPair.toString());
         } catch (error) {
-          console.error('Failed to store credentials in localStorage:', error);
+          console.error('Failed to store keypair in localStorage:', error);
         }
       }
       
-      await setupNearConnection(keyPair, newAccountId);
-      setAccountId(newAccountId);
-      return { accountId: newAccountId };
+      // Don't setup connection yet - wait for account creation
+      return { keyPair: newKeyPair };
     } catch (error) {
       console.error("Error getting NEAR credentials:", error);
+      throw error;
+    }
+  };
+
+  // Add a new function to set up account
+  const setupAccount = async (newAccountId) => {
+    try {
+      if (!keyPair) throw new Error("No keypair available");
+      
+      await setupNearConnection(keyPair, newAccountId);
+      setAccountId(newAccountId);
+      setNamedAccountId(newAccountId);
+      localStorage.setItem('accountId', newAccountId);
+      localStorage.setItem('namedAccountId', newAccountId);
+    } catch (error) {
+      console.error("Error setting up account:", error);
       throw error;
     }
   };
@@ -170,12 +194,15 @@ export function Web3AuthProvider({ children }) {
         await web3auth.logout();
         setProvider(null);
         setAccountId(null);
+        setNamedAccountId(null);
         setNearConnection(null);
-        // Safely clear stored credentials
+        setKeyPair(null);
+        // Clear storage
         if (typeof window !== 'undefined') {
           try {
-            localStorage.removeItem('web3auth_accountId');
-            localStorage.removeItem('web3auth_private_key');
+            localStorage.removeItem('web3auth_keypair');
+            localStorage.removeItem('accountId');
+            localStorage.removeItem('namedAccountId');
           } catch (error) {
             console.error('Failed to clear localStorage:', error);
           }
@@ -195,6 +222,8 @@ export function Web3AuthProvider({ children }) {
       namedAccountId,
       setNamedAccountId,
       nearConnection,
+      keyPair,
+      setupAccount,
       loginWithProvider,
       logout
     }}>
