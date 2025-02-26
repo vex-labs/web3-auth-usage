@@ -33,7 +33,6 @@ export function Web3AuthProvider({ children }) {
   const [nearConnection, setNearConnection] = useState(null);
   const [web3auth, setWeb3auth] = useState(null);
   const [isClientLoaded, setIsClientLoaded] = useState(false);
-  const [namedAccountId, setNamedAccountId] = useState(null);
   const [keyPair, setKeyPair] = useState(null);
 
   // Handle client-side initialization and restore keypair
@@ -60,10 +59,6 @@ export function Web3AuthProvider({ children }) {
           setAccountId(storedAccountId);
         }
         
-        if (storedNamedAccountId) {
-          setNamedAccountId(storedNamedAccountId);
-        }
-        
         // If we have a keypair but no account, we need to force account creation
         if (!storedAccountId && !storedNamedAccountId) {
           // The CreateAccountModal will show automatically due to the effect in Navigation
@@ -77,7 +72,6 @@ export function Web3AuthProvider({ children }) {
         localStorage.removeItem('namedAccountId');
         setKeyPair(null);
         setAccountId(null);
-        setNamedAccountId(null);
       }
     };
 
@@ -158,18 +152,22 @@ export function Web3AuthProvider({ children }) {
   };
 
   // Add a new function to set up account
-  const setupAccount = async (newAccountId) => {
+  const setupAccount = async (accountId, providedKeyPair = null) => {
     try {
-      if (!keyPair) throw new Error("No keypair available");
+      // Use provided keyPair if available, otherwise use state keyPair
+      const keyPairToUse = providedKeyPair || keyPair;
       
-      await setupNearConnection(keyPair, newAccountId);
-      setAccountId(newAccountId);
-      setNamedAccountId(newAccountId);
+      if (!keyPairToUse) throw new Error("No keypair available");
+
+      console.log("keyPairToUse", keyPairToUse);
+      console.log("accountId", accountId);
+      
+      await setupNearConnection(keyPairToUse, accountId);
+      setAccountId(accountId);
       
       // Store account IDs in localStorage
       if (typeof window !== 'undefined') {
-        localStorage.setItem('accountId', newAccountId);
-        localStorage.setItem('namedAccountId', newAccountId);
+        localStorage.setItem('accountId', accountId);
       }
     } catch (error) {
       console.error("Error setting up account:", error);
@@ -186,8 +184,8 @@ export function Web3AuthProvider({ children }) {
       setProvider(web3authProvider);
       
       // Get credentials and check for existing account
-      const { keyPair } = await getNearCredentials(web3authProvider);
-      const publicKey = keyPair.getPublicKey().toString();
+      const { keyPair: theKeyPair } = await getNearCredentials(web3authProvider);
+      const publicKey = theKeyPair.getPublicKey().toString();
       
       // Check if account exists
       const response = await fetch('/api/auth/check-for-account', {
@@ -202,7 +200,7 @@ export function Web3AuthProvider({ children }) {
 
       if (data.exists) {
         // Account exists, set it up
-        await setupAccount(data.accountId);
+        await setupAccount(data.accountId, theKeyPair);
         return web3authProvider;
       }
       
@@ -223,7 +221,6 @@ export function Web3AuthProvider({ children }) {
         await web3auth.logout();
         setProvider(null);
         setAccountId(null);
-        setNamedAccountId(null);
         setNearConnection(null);
         setKeyPair(null);
         // Clear storage
@@ -248,8 +245,7 @@ export function Web3AuthProvider({ children }) {
       web3auth,
       provider,
       accountId,
-      namedAccountId,
-      setNamedAccountId,
+      setAccountId,
       nearConnection,
       keyPair,
       setupAccount,

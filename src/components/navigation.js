@@ -5,7 +5,7 @@ import { LoginModal } from './LoginModal';
 import { CreateAccountModal } from './CreateAccountModal';
 
 export const Navigation = () => {
-  const { web3auth, loginWithProvider, logout: web3authLogout, accountId, namedAccountId, setNamedAccountId, keyPair } = useWeb3Auth();
+  const { web3auth, loginWithProvider, logout: web3authLogout, accountId, setAccountId, keyPair } = useWeb3Auth();
   const { wallet, signedAccountId } = useNear();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isCreateAccountModalOpen, setIsCreateAccountModalOpen] = useState(false);
@@ -16,12 +16,16 @@ export const Navigation = () => {
     setIsClientLoaded(true);
   }, []);
 
-  // Show create account modal when keypair exists but no account ID
+  // Modified effect to check for existing accounts before showing modal
   useEffect(() => {
-    if (isClientLoaded && keyPair && !accountId && !namedAccountId && !signedAccountId) {
+    if (isClientLoaded && keyPair && !accountId && !signedAccountId) {
+      // Only show create account modal if no accounts exist
       setIsCreateAccountModalOpen(true);
+    } else {
+      // Close the modal if any account exists
+      setIsCreateAccountModalOpen(false);
     }
-  }, [keyPair, accountId, namedAccountId, signedAccountId, isClientLoaded]);
+  }, [keyPair, accountId, signedAccountId, isClientLoaded]);
 
   const handleLoginWithProvider = async (provider, options) => {
     try {
@@ -34,7 +38,7 @@ export const Navigation = () => {
   };
 
   const handleAccountCreated = (newAccountId) => {
-    setNamedAccountId(newAccountId);
+    setAccountId(newAccountId);
     setIsCreateAccountModalOpen(false);
   };
 
@@ -43,7 +47,7 @@ export const Navigation = () => {
     !!signedAccountId
   );
 
-  const displayName = signedAccountId || namedAccountId || accountId;
+  const displayName = signedAccountId || accountId;
 
   const handleLogout = async () => {
     if (web3auth?.connected) {
