@@ -12,4 +12,5 @@ The code also needs to check whether the account name is going to be valid for n
 USERS_ACCOUNT_PRIVATE_KEY=
 MONGODB_URI=
 WEB3AUTH_CLIENT_ID=
+RELAYER_PRIVATE_KEY=
 ```

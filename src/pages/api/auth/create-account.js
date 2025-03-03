@@ -50,8 +50,47 @@ export default async function handler(req, res) {
         parentAccount: ACCOUNT_ID,
       });
 
-      // Create the NEAR account
-      await account.createAccount(newAccountId, publicKey, "0");
+      // Create the NEAR account using delegate action
+      const createAccountAction = {
+        type: "CreateAccount",
+        params: {}
+      };
+
+      const addKeyAction = {
+        type: "AddKey",
+        params: {
+          publicKey: publicKey,
+          accessKey: {
+            nonce: 0,
+            permission: "FullAccess"
+          }
+        }
+      };
+
+      const signedDelegate = await account.signedDelegate({
+        actions: [createAccountAction, addKeyAction],
+        blockHeightTtl: 60,
+        receiverId: newAccountId,
+      });
+
+      // Send the signed delegate to our relay API
+      const relayResponse = await fetch(`${process.env.BASE_URL}/api/transactions/relay`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          signedDelegate: signedDelegate,
+          receiverId: newAccountId
+        }),
+      });
+
+      if (!relayResponse.ok) {
+        const error = await relayResponse.json();
+        throw new Error(error.message || 'Failed to relay transaction');
+      }
+
+      const { receipt } = await relayResponse.json();
 
       // Connect to MongoDB and create user entry
       await client.connect();

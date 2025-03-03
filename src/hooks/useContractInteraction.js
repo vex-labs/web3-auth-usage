@@ -1,6 +1,7 @@
 import { useWeb3Auth } from "@/context/Web3AuthContext";
 import { useNear } from "@/context/NearContext";
 import { providers } from "near-api-js";
+import { actionCreators, encodeSignedDelegate } from "@near-js/transactions";
 
 export function useContractInteraction() {
   const {
@@ -51,15 +52,38 @@ export function useContractInteraction() {
     // If using Web3Auth
     if (web3auth?.connected) {
       const account = await nearConnection.account(web3authAccountId);
-      return account.functionCall({
-        contractId: "hello.near-examples.testnet",
-        methodName: "set_greeting",
-        args: {
-          greeting: newGreeting,
-        },
-        gas: 100000000000000,
-        deposit: 0,
+      const action = actionCreators.functionCall(
+        "set_greeting",
+        { greeting: newGreeting },
+        3000000000000n,  // Using BigInt like the working example
+        "0"
+      );
+
+      const signedDelegate = await account.signedDelegate({
+        actions: [action],
+        blockHeightTtl: 120,
+        receiverId: "hello.near-examples.testnet",
       });
+
+      // Convert the signed delegate to array format like the working example
+      const encodedDelegate = Array.from(encodeSignedDelegate(signedDelegate));
+
+      // Send the signed delegate to our relay API
+      const response = await fetch('/api/transactions/relay', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify([encodedDelegate]),  // Send as array of transactions
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to relay transaction');
+      }
+
+      const { data } = await response.json();
+      return data[0]; // Return first transaction outcome
     }
 
     // If using NEAR Wallet
