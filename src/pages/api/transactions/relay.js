@@ -46,7 +46,7 @@ export default async function handler(req, res) {
 
         return await relayerAccount.signAndSendTransaction({
           actions: [actionCreators.signedDelegate(deserializedTx)],
-          receiverId: deserializedTx.delegateAction.senderId,
+          receiverId: deserializedTx.delegateAction.senderId, // For some reason the receiverId is the web3auth user not the contract address
         });
       })
     );
